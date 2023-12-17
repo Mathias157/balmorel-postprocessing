@@ -38,32 +38,44 @@ try:
 
     ### 1.1 Load DataFrames
     ws = gams.GamsWorkspace()
-    dfs = {}
+    dfs = {symbol : pd.DataFrame({}) for symbol in symbols}
 
+    for SC in SCs:
+        if len(iters) >= 1:
+            for itr in iters:                
+                SC_FULL = SC + '_Iter%s'%itr
+                try:
+                    print('\nTrying to load MainResults_%s.gdx..'%SC_FULL)
+                    db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC_FULL)
+                    
+                    for symbol in symbols:
+                        try:
+                            temp = symbol_to_df(db, symbol)
+                            temp['SC'] = SC
+                            temp['Iteration'] = itr
+                            dfs[symbol] = pd.concat((dfs[symbol], temp))
+                            print("Loaded %s"%(symbol))
+                        except:
+                            print("Couldn't load %s"%symbol)
+                except:
+                    print("It doesn't exist, not loaded")
+        try:
+            print('\nTrying to load MainResults_%s.gdx..'%SC)
+            db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC)
+            
+            for symbol in symbols:
+                try:
+                    temp = symbol_to_df(db, symbol)
+                    temp['SC'] = SC
+                    temp['Iteration'] = -1
+                    dfs[symbol] = pd.concat((dfs[symbol], temp)) 
+                    print("Loaded %s"%(symbol))
+                except:
+                    print("Couldn't load %s"%symbol)
+        except:
+            print("It doesn't existm not loaded"%SC)    
+            
     for symbol in symbols:
-        dfs[symbol] = pd.DataFrame({})
-        for SC in SCs:
-            if len(iters) >= 1:
-                for itr in iters:                
-                    SC_FULL = SC + '_Iter%s'%itr
-                    try:
-                        db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC_FULL)
-                        
-                        temp = symbol_to_df(db, symbol)
-                        temp['SC'] = SC
-                        temp['Iteration'] = itr
-                        dfs[symbol] = pd.concat((dfs[symbol], temp))
-                    except:
-                        print("%s doesn't exist"%SC_FULL)
-            try:
-                db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC)
-                
-                temp = symbol_to_df(db, symbol)
-                temp['SC'] = SC
-                temp['Iteration'] = -1
-                dfs[symbol] = pd.concat((dfs[symbol], temp))    
-            except:
-                print("%s doesn't exist"%SC)       
         dfs[symbol].to_csv('Output/%s.csv'%symbol, index=None)
 
     ### 1.2 Saves the dataframes as efficient pickle files that can be read in a python script 
@@ -74,13 +86,15 @@ try:
     ### 1.3 Opening a pickle file
     # with open('df.pkl', 'rb') as f:
     #     dfs = pickle.load(f)
-
+    
+    print('\nSuccesful execution of LoadGDX.py')
     with open('Output/Log.txt', 'w') as f:
         f.write('No errors')
 
 except Exception as e:
     message = traceback.format_exc()
     
+    print('\nAn error occurred - check the Python environment')
     with open('Output/Log.txt', 'w') as f:
         f.write('Something went wrong. Make sure you typed an existing scenario, iteration, symbol, region, year, legend type and/or plot style.')
         f.write('\n\n' + message)

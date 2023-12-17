@@ -26,7 +26,7 @@ try:
         reg     = sys.argv[4]
         Y       = sys.argv[5]
         typ     = sys.argv[6] # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
-        style   = sys.argv[7].replace(' ', '').lower()
+        style   = sys.argv[7].lower()
         
     ### 0.1 If no arguments, then you are probably running this script stand-alone
     else:
@@ -81,7 +81,7 @@ try:
     RorC = 'R' # Region or country level?
     country = 'GERMANY'
     countryR = 'DE'
-    resfactor = 13 # Factor on flows, to get yearly results 
+    resfactor = 1 # Factor on flows, to get yearly results 
     elprice_agg = np.max # function for aggregation of regions - average or max ?
     bypass_eps = 'Y' # Bypass EPS values in electricity prices? This could be fair, if you have regions with very small electricity demand, making EPS electricity prices (not wrong)
 
@@ -150,6 +150,7 @@ try:
         fFlow = fFlow[~idx]
 
     # Get year
+    print('Note that the following flows have not been scaled to fit annual flows\n')
     try:
         idx = fFlow['Y'] == Y
 
@@ -297,12 +298,14 @@ try:
     # ax.set_ylim(-15000, 5000)
     fig.savefig('Output/productionprofile.png', bbox_inches='tight')
 
+    print('\nSuccesful execution of ProductionProfile.py')
     with open('Output/Log.txt', 'w') as f:
         f.write('No errors')
         
 except Exception as e:
     message = traceback.format_exc()
     
+    print('\nAn error occurred - check the Python environment')
     with open('Output/Log.txt', 'w') as f:
         f.write('Something went wrong. Make sure you typed an existing scenario, iteration, symbol, region, year, legend type and/or plot style.')
         f.write('\n\n' + message)
