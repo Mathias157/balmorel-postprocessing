@@ -23,7 +23,7 @@ try:
         wk_dir    = r'%s'%sys.argv[1]
         SC     = sys.argv[2]
         iter   = sys.argv[3]
-        reg     = sys.argv[4]
+        reg     = sys.argv[4].upper()
         Y       = sys.argv[5]
         typ     = sys.argv[6] # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
         style   = sys.argv[7].lower()
@@ -32,13 +32,13 @@ try:
     else:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
-        os.chdir(__file__.replace(r'\Scripts\LoadGDX.py', ''))
-        wk_dir = r'C:\Users\mberos\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Smaller Analyses\Transport Modelling'
-        SC = 'TransportBase'
+        os.chdir(__file__.replace(r'\Scripts\ProductionProfile.py', ''))
+        wk_dir = r'C:\Users\mberos\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
+        SC = 'eur-system-test'
         iter = '0'
-        reg = 'TR'
-        Y = '2050'
-        typ = 'TECH_TYPE' # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
+        reg = 'All'
+        Y = '2020'
+        typ = 'FFF' # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
         style = 'dark'
 
     ### 0.2 Set plot style
@@ -68,7 +68,6 @@ try:
         db = ws.add_database_from_gdx(wk_dir + '/MainResults_%s.gdx'%SC)
 
     fProd = symbol_to_df(db, "PRO_YCRAGFST", cols=['Y', 'C', 'RRR', 'AAA', 'G', 'FFF', 'SSS', 'TTT', 'COMMODITY', 'TECH_TYPE', 'UNITS', 'Val'])
-    fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
     fElP  = symbol_to_df(db, "EL_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
     fElD  = symbol_to_df(db, "EL_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
 
@@ -78,11 +77,19 @@ try:
     ### ----------------------------- ###
 
     # Choices
-    RorC = 'R' # Region or country level?
-    country = 'GERMANY'
-    countryR = 'DE'
+    if reg in fProd.C.unique():
+        RorC = 'C' # Region or country level?
+        country = reg 
+        # Load transmission
+        fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+    elif reg in fProd.RRR.unique():
+        RorC = 'R'
+        # Load transmission
+        fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+    elif reg == 'ALL':
+        RorC = 'All'
     resfactor = 1 # Factor on flows, to get yearly results 
-    elprice_agg = np.max # function for aggregation of regions - average or max ?
+    elprice_agg = np.average # function for aggregation of regions - average or max ?
     bypass_eps = 'Y' # Bypass EPS values in electricity prices? This could be fair, if you have regions with very small electricity demand, making EPS electricity prices (not wrong)
 
 
@@ -125,6 +132,8 @@ try:
         idx = fProd['RRR'] == reg
     elif RorC == 'C':
         idx = fProd['C'] == country
+    elif RorC == 'All':
+        idx = fProd['C'] == fProd['C']
     idx = idx & (fProd['COMMODITY'] == com)
     idx = idx & (fProd['Y'] == Y)
 
@@ -135,33 +144,20 @@ try:
     ### Import / Export
     # First aggregate regions in country, if country
     if RorC == 'C':
-        # Export aggregation
-        idx = fFlow.IRRRE.str.find(countryR) != -1
-        print('Country model check, should be only one country-region: ', fFlow[idx].IRRRE.unique())
-        fFlow.loc[idx, 'IRRRE'] = countryR
-        
-        # Import aggregation
-        idx = fFlow.IRRRI.str.find(countryR) != -1
-        print('Country model check, should be only one country-region: ', fFlow[idx].IRRRI.unique())
-        fFlow.loc[idx, 'IRRRI'] = countryR
-                
-        # Remove all internal flows
-        idx = (fFlow.IRRRE == countryR) & (fFlow.IRRRI == countryR)
-        fFlow = fFlow[~idx]
+        for reg0 in [reg0 for reg0 in fFlow.loc[fFlow.C == reg, 'IRRRE'].unique()]:
+            fFlow['IRRRE'] = fFlow['IRRRE'].str.replace(reg0, country) 
+            fFlow['IRRRI'] = fFlow['IRRRI'].str.replace(reg0, country) 
+        # Delete internal flows
+        fFlow = fFlow[~((fFlow.IRRRE == reg) & (fFlow.IRRRI == reg))]
 
     # Get year
     print('Note that the following flows have not been scaled to fit annual flows\n')
     try:
         idx = fFlow['Y'] == Y
 
-        if RorC == 'R':
-            idx1 = fFlow['IRRRE'] == reg
-            idx2 = fFlow['IRRRI'] == reg
-        elif RorC == 'C':
-            idx1 = fFlow['IRRRE'] == countryR
-            idx2 = fFlow['IRRRI'] == countryR
-            reg = countryR
-
+        idx1 = fFlow['IRRRE'] == reg
+        idx2 = fFlow['IRRRI'] == reg
+        
         fFlE = fFlow[idx & idx1].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)    
         fFlI = fFlow[idx & idx2].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)
 
@@ -173,7 +169,7 @@ try:
         print(fFlow[idx & idx2].pivot_table(values='Val', index=['IRRRE'], aggfunc=sum)/1e6*resfactor  )
         print('\n')
         no_trans_data = False
-    except KeyError:
+    except (KeyError, NameError):
         no_trans_data = True
         print('No transmission data')
 
@@ -192,6 +188,12 @@ try:
         dems = fElD[(fElD['Y']==Y) & (fElD['RRR'] == reg)]
         fP = fElP[fElP['RRR'] == reg]    
         fD = fElD[fElD['RRR'] == reg] 
+    elif RorC == 'All':
+        fP = fElP.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
+        fP = fP.aggregate({'Val' : elprice_agg}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)        
+        fD = fElD.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
+        fD = fD.aggregate({'Val' : np.sum}) 
+        dems = fD[(fD['Y']==Y)]
 
     print('Electricity Demand: [TWh]')
     for cat in np.unique(dems['VARIABLE_CATEGORY']):
@@ -282,8 +284,11 @@ try:
     # ax.set_xticks(xticks+12.5)
     # ax.set_xticklabels((xticks/24).astype(int)) # old
     # ax.set_xticklabels(['S02', 'S08', 'S15', 'S21', 'S28', 'S34', 'S41', 'S47']) # For 4 representative weeks
-    ax2.set_ylabel('Price [€ / MWh]')
-    ax2.set_ylim([0, 300])
+    if (RorC == 'R'):
+        ax2.set_ylabel('Price [€ / MWh]')
+    else:
+        ax2.set_ylabel('Average Price [€ / MWh]')
+    # ax2.set_ylim([0, 300])
     # ax.set_xlim([0, 192])
     # ax.set_xlim([2*168, 3*168])
     # ax.set_xlim([0, 4*168])
@@ -296,7 +301,7 @@ try:
     # ax.set_xlim([200, 250])
 
     # ax.set_ylim(-15000, 5000)
-    fig.savefig('Output/productionprofile.png', bbox_inches='tight')
+    fig.savefig('Output/productionprofile.png', bbox_inches='tight', transparent=True)
 
     print('\nSuccesful execution of ProductionProfile.py')
     with open('Output/Log.txt', 'w') as f:
