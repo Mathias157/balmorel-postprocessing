@@ -59,22 +59,22 @@ try:
                             print("Couldn't load %s"%symbol)
                 except gams.GamsException:
                     print("It doesn't exist, not loaded")
-        else:
-            try:
-                print('\nTrying to load MainResults_%s.gdx..'%SC)
-                db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC)
-                
-                for symbol in symbols:
-                    try:
-                        temp = symbol_to_df(db, symbol)
-                        temp['SC'] = SC
-                        temp['Iteration'] = -1
-                        dfs[symbol] = pd.concat((dfs[symbol], temp)) 
-                        print("Loaded %s"%(symbol))
-                    except:
-                        print("Couldn't load %s"%symbol)
-            except gams.GamsException:
-                print("It doesn't existm not loaded"%SC)    
+
+        try:
+            print('\nTrying to load MainResults_%s.gdx..'%SC)
+            db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC)
+            
+            for symbol in symbols:
+                try:
+                    temp = symbol_to_df(db, symbol)
+                    temp['SC'] = SC
+                    temp['Iteration'] = -1
+                    dfs[symbol] = pd.concat((dfs[symbol], temp)) 
+                    print("Loaded %s"%(symbol))
+                except:
+                    print("Couldn't load %s"%symbol)
+        except gams.GamsException:
+            print("It doesn't exist, not loaded")    
             
     for symbol in symbols:
         dfs[symbol].to_csv('Output/%s.csv'%symbol, index=None)
