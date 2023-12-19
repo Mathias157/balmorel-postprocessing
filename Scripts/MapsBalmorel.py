@@ -599,8 +599,8 @@ try:
 
     ax.set_facecolor(fc)
     # EU limits
-    ax.set_xlim(-11,32)      
-    ax.set_ylim(35,72)
+    ax.set_xlim(-11,36)      
+    # ax.set_ylim(35,72)
     # DK Limits 
     # ax.set_xlim(7.5,15.5)      
     # ax.set_ylim(54,58) 
