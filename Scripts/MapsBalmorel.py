@@ -33,8 +33,8 @@ try:
     import os
     import glob
 
-    sys.path.append(r'C:\GAMS\39\apifiles\Python\api_38')
-    sys.path.append(r'C:\GAMS\39\apifiles\Python\gams')
+    # sys.path.append(r'C:\GAMS\39\apifiles\Python\api_38')
+    # sys.path.append(r'C:\GAMS\39\apifiles\Python\gams')
 
     from gams import GamsWorkspace
 
@@ -43,18 +43,22 @@ try:
     ### 0.0 Load Arguments
     if len(sys.argv) > 2:
         path_to_results   = r'%s'%sys.argv[1]
-        SCENARIO        = sys.argv[2]
-        iter        = sys.argv[3]
-        year       = int(sys.argv[4])
-        COMMODITY       = sys.argv[5].lower().capitalize() # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
-        style      = sys.argv[6].lower()
+        path_to_geofile = r'%s'%sys.argv[2]
+        geo_file_region_column = sys.argv[3]
+        SCENARIO        = sys.argv[4]
+        iter        = sys.argv[5]
+        year       = int(sys.argv[6])
+        COMMODITY       = sys.argv[7].lower().capitalize() # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
+        style      = sys.argv[8].lower()
         
     ### 0.1 If no arguments, then you are probably running this script stand-alone
     else:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
         os.chdir(__file__.replace(r'\Scripts\ProductionProfile.py', ''))
-        wk_dir = r'C:\Users\mberos\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
+        path_to_results = r'C:\Users\mathi\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
+        path_to_geofile = r'.\Input\2022 BalmorelMap.geojson'
+        geo_file_region_column = 'id'
         SC = 'eur-system-test'
         iter = '0'
         reg = 'All'
@@ -87,12 +91,7 @@ try:
     exo_end = 'Total' # Choose from ['Endogenous', 'Exogenous', 'Total']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
     S = 'S02' #Season 
     T = 'T073' #Hour  
-
-    # Geofile
-    path_to_geofile = 'Input/FR.geojson'
-    geo_file_region_column = 'zoneName'
-    path_to_results = r'C:\Users\mathi\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
-
+    
     # Alternative geofile (off, at the moment)
     AltGeo = 'Balmorel'  
     # AltGeo = 'MUNI' # The other type of polygons, if traditional Balmorel regions areas not used
@@ -311,7 +310,7 @@ try:
                 var_list = var_list + ['X_FLOW_YCRST']
             if hub_display == True:
                 var_list = var_list + ['PRO_YCRAGFST']
-        if COMMODITY == 'H2':
+        if COMMODITY == 'Hydrogen':
             var_list = []
             if LINES == 'Capacity' or LINES == 'CongestionFlow' or LINES == 'Flow': 
                 var_list = var_list + ['G_CAP_YCRAF', 'XH2_CAP_YCR']
@@ -350,7 +349,7 @@ try:
         if LINES == 'Capacity' or LINES == 'CongestionFlow'  or LINES == 'Flow':
             if COMMODITY == 'Electricity':
                 df_capacity = all_df['X_CAP_YCR']
-            if COMMODITY == 'H2':
+            if COMMODITY == 'Hydrogen':
                 df_capacity = all_df['XH2_CAP_YCR']
             if COMMODITY == 'Other':
                 df_capacity = all_df[var_list[1]]
@@ -359,7 +358,7 @@ try:
         if LINES == 'Flow' or LINES == 'CongestionFlow' : 
             if COMMODITY == 'Electricity':
                 df_flow = all_df['X_FLOW_YCRST']
-            if COMMODITY == 'H2':
+            if COMMODITY == 'Hydrogen':
                 df_flow = all_df['XH2_FLOW_YCRST']
         if COMMODITY == 'Other':
             if LINES == 'Flow':
@@ -386,7 +385,7 @@ try:
         if COMMODITY == 'Electricity':
             flow_file = 'FlowElectricityHourly_'+ SCENARIO + '_' + YEAR + '_' + SUBSET + '.csv'
             transcap_file = 'CapacityElectricityTransmission_'+ SCENARIO + '_' + YEAR + '_'+ SUBSET + '.csv'
-        if COMMODITY == 'H2':
+        if COMMODITY == 'Hydrogen':
             flow_file = 'FlowH2Hourly_'+ SCENARIO + '_' + YEAR + '_' + SUBSET + '.csv'
             transcap_file = 'CapacityH2Transmission_'+ SCENARIO + '_' + YEAR + '_'+ SUBSET + '.csv'
         
@@ -590,7 +589,7 @@ try:
 
     # fig, ax = plt.subplots(figsize=(12, 12), dpi=100,
     #                        facecolor=fc)
-    ax.set_title(' - '.join((SCENARIO, str(year))))
+    ax.set_title(' - '.join((SCENARIO, str(year), COMMODITY + ' Transmission ' + LINES + ' [GW]')))
     # ax.set_title('Ingen interk.')
 
     # Adding shapefiles
@@ -706,7 +705,7 @@ try:
     # plt.savefig("network_MUNI_2DE_NoS_MoreFLH_noBio_LSNOstevns.svg", bbox_inches="tight", transparent=True)
     plt.savefig("Output/balmorelmap.png", bbox_inches="tight", transparent=True)
 
-    print('\nSuccesful execution of ProductionProfile.py')
+    print('\nSuccesful execution of MapsBalmorel.py')
     with open('Output/Log.txt', 'w') as f:
         f.write('No errors')
         
