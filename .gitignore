@@ -1,3 +1,4 @@
 Output/*
+!Output/.keepfolder
 Scripts/__pycache__/*
 ~$InteractiveResults.xlsm
