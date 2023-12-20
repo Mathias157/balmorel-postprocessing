@@ -49,7 +49,8 @@ try:
         iter        = sys.argv[5]
         year       = int(sys.argv[6])
         COMMODITY       = sys.argv[7].lower().capitalize() # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
-        style      = sys.argv[8].lower()
+        exo_end = sys.argv[8] # Choose from ['Endogenous', 'Exogenous', 'Total']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
+        style      = sys.argv[9].lower()
         
     ### 0.1 If no arguments, then you are probably running this script stand-alone
     else:
@@ -64,6 +65,7 @@ try:
         reg = 'All'
         year = 2050 #Year to be displayed
         COMMODITY = 'H2' #Choose from: ['Electricity', 'H2', 'Other']. Add to csv-files name (only relevant if filetype_input == 'csv'). If 'Other': go to cell 1.4.0.
+        exo_end = 'Both' # Choose from ['Endogenous', 'Exogenous', 'Total']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
         style = 'dark'
 
     if style == 'light':
@@ -88,7 +90,6 @@ try:
     YEAR = '' #Add year to read file name (e.g. '2025', '2035', 'full')
     SUBSET = '' #Add subset to read file name (e.g. 'full')
     LINES = 'Capacity' #Choose from: ['Capacity', 'Flow', 'CongestionFlow']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
-    exo_end = 'Total' # Choose from ['Endogenous', 'Exogenous', 'Total']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
     S = 'S02' #Season 
     T = 'T073' #Hour  
     
@@ -457,8 +458,8 @@ try:
         df_flow['Value'] = df_flow['Value'] / 1000
         df_flow = df_flow.reset_index(drop = True)
         if len(df_flow) == 0:
-            print("Error: Timestep not in data; check year, S and T.")
-            sys.exit()
+            error_message = "Error: Timestep not in data; check year, S and T."
+            print(5/0)
 
 
     ### 2.3 Group hub data
@@ -496,7 +497,7 @@ try:
     if LINES == 'Capacity' or LINES == 'CongestionFlow': #Skip this cell in case LINES == 'Flow'
         df_capacity['Year'] = df_capacity['Year'].astype(int)
         df_capacity = df_capacity.loc[df_capacity['Year'] == year, ].reset_index(drop = True) #Keep only data from year of interest
-        if exo_end == 'Total' or LINES == 'CongestionFlow':
+        if exo_end == 'Both' or LINES == 'CongestionFlow':
             col_keep = list(np.delete(np.array(df_capacity.columns),np.where((df_capacity.columns == 'VARIABLE_CATEGORY') | (df_capacity.columns == 'Value')) )) #Create list with all columns except 'Variable_Category' and 'Value'
             df_capacity = pd.DataFrame(df_capacity.groupby(col_keep)['Value'].sum().reset_index() )#Sum exogenous and endogenous capacity for each region
         if exo_end == 'Endogenous' and LINES != 'CongestionFlow':
@@ -528,9 +529,8 @@ try:
             
 
         if len(df_capacity) == 0:
-            print("Error: No capacity found. Check year and exo_end.")
-            sys.exit()
-            
+            error_message = "Error: No capacity found. Check year and variable type."
+            print(5/0)
             
     ### 2.5 Add bypass coordinates for indirect lines
     if LINES == 'Capacity':
@@ -600,7 +600,7 @@ try:
     ax.set_facecolor(fc)
     # EU limits
     ax.set_xlim(-11,36)      
-    # ax.set_ylim(35,72)
+    ax.set_ylim(33,72)
     # DK Limits 
     # ax.set_xlim(7.5,15.5)      
     # ax.set_ylim(54,58) 
@@ -715,6 +715,9 @@ except Exception as e:
     
     print('\nAn error occurred - check the Python environment')
     with open('Output/Log.txt', 'w') as f:
-        f.write('Something went wrong. Make sure you typed an existing scenario, iteration, symbol, region, year, legend type and/or plot style.')
-        f.write('\n\n' + message)
+        if 'error_message' in locals():
+            f.write(error_message)
+        else:
+            f.write('Something went wrong. Make sure you typed an existing scenario, iteration, symbol, region, year, legend type and/or plot style.')
+            f.write('\n\n' + message)
     
