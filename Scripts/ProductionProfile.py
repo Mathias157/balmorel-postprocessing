@@ -25,8 +25,9 @@ try:
         iter   = sys.argv[3]
         reg     = sys.argv[4].upper()
         Y       = sys.argv[5]
-        typ     = sys.argv[6] # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
-        style   = sys.argv[7].lower()
+        com     = sys.argv[6].upper()
+        typ     = sys.argv[7] # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
+        style   = sys.argv[8].lower()
         
     ### 0.1 If no arguments, then you are probably running this script stand-alone
     else:
@@ -36,9 +37,10 @@ try:
         wk_dir = r'C:\Users\mberos\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
         SC = 'eur-system-test'
         iter = '0'
-        reg = 'All'
-        Y = '2020'
-        typ = 'FFF' # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
+        reg = 'DE4-W'
+        com = 'HYDROGEN'
+        Y = '2050'
+        typ = 'TECH_TYPE' # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
         style = 'dark'
 
     ### 0.2 Set plot style
@@ -68,9 +70,13 @@ try:
         db = ws.add_database_from_gdx(wk_dir + '/MainResults_%s.gdx'%SC)
 
     fProd = symbol_to_df(db, "PRO_YCRAGFST", cols=['Y', 'C', 'RRR', 'AAA', 'G', 'FFF', 'SSS', 'TTT', 'COMMODITY', 'TECH_TYPE', 'UNITS', 'Val'])
-    fElP  = symbol_to_df(db, "EL_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
-    fElD  = symbol_to_df(db, "EL_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
-
+    
+    if com == 'ELECTRICITY':
+        fPrice  = symbol_to_df(db, "EL_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
+        fDem  = symbol_to_df(db, "EL_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
+    else:
+        fPrice  = symbol_to_df(db, "H2_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
+        fDem  = symbol_to_df(db, "H2_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
 
     ### ----------------------------- ###
     ###           Parameters          ###
@@ -81,15 +87,25 @@ try:
         RorC = 'C' # Region or country level?
         country = reg 
         # Load transmission
-        fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        if com == 'ELECTRICITY':
+            fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        elif com == 'HYDROGEN':
+            fFlow = symbol_to_df(db, "XH2_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        else:
+            pass
     elif reg in fProd.RRR.unique():
         RorC = 'R'
         # Load transmission
-        fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        if com == 'ELECTRICITY':
+            fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        elif com == 'HYDROGEN':
+            fFlow = symbol_to_df(db, "XH2_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        else:
+            pass   
     elif reg == 'ALL':
         RorC = 'All'
     resfactor = 1 # Factor on flows, to get yearly results 
-    elprice_agg = np.average # function for aggregation of regions - average or max ?
+    price_agg_func = np.average # function for aggregation of regions - average or max ?
     bypass_eps = 'Y' # Bypass EPS values in electricity prices? This could be fair, if you have regions with very small electricity demand, making EPS electricity prices (not wrong)
 
 
@@ -124,8 +140,6 @@ try:
     ###              Sort             ###
     ### ----------------------------- ###
 
-    ### Sort
-    com = 'ELECTRICITY'
     
     # Production
     if RorC == 'R':
@@ -137,10 +151,15 @@ try:
     idx = idx & (fProd['COMMODITY'] == com)
     idx = idx & (fProd['Y'] == Y)
 
+    # Make temporal index
+    t_index = pd.MultiIndex.from_product((fProd.SSS.unique(), fProd.TTT.unique()), names=['SSS', 'TTT'])
+    df_placeholder = pd.DataFrame(index=t_index)
+
+    # Create production dataframe
     fPr = fProd[idx].pivot_table(values='Val', index=['SSS', 'TTT'], columns=[typ],aggfunc=sum)
-    fPr[np.isnan(fPr)] = 0
-
-
+    fPr = df_placeholder.join(fPr, how='left')
+    fPr.fillna(0, inplace=True)
+    
     ### Import / Export
     # First aggregate regions in country, if country
     if RorC == 'C':
@@ -160,7 +179,14 @@ try:
         
         fFlE = fFlow[idx & idx1].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)    
         fFlI = fFlow[idx & idx2].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)
-
+        
+        # Make sure no values are missing
+        fFlE = df_placeholder.join(fFlE, how='left')
+        fFlE.fillna(0, inplace=True)
+    
+        fFlI = df_placeholder.join(fFlI, how='left')
+        fFlI.fillna(0, inplace=True)
+    
         print('\n' + reg + ' Main Export-To Regions: [TWh]')
         print(fFlow[idx & idx1].pivot_table(values='Val', index=['IRRRI'], aggfunc=sum)/1e6*resfactor  )
         print('\n')
@@ -176,22 +202,22 @@ try:
 
     ### Electricity Demand and price
     if RorC == 'C':
-        fP = fElP.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
-        fP = fP.aggregate({'Val' : elprice_agg}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)
+        fP = fPrice.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
+        fP = fP.aggregate({'Val' : price_agg_func}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)
         fP = fP[fP.C == country]    
         
-        fD = fElD.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
+        fD = fDem.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
         fD = fD.aggregate({'Val' : np.sum}) 
         dems = fD[(fD['Y']==Y) & (fD['C'] == country)]
-        fD = fElD[fElD.C == country] 
+        fD = fDem[fDem.C == country] 
     elif RorC == 'R':
-        dems = fElD[(fElD['Y']==Y) & (fElD['RRR'] == reg)]
-        fP = fElP[fElP['RRR'] == reg]    
-        fD = fElD[fElD['RRR'] == reg] 
+        dems = fDem[(fDem['Y']==Y) & (fDem['RRR'] == reg)]
+        fP = fPrice[fPrice['RRR'] == reg]    
+        fD = fDem[fDem['RRR'] == reg] 
     elif RorC == 'All':
-        fP = fElP.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
-        fP = fP.aggregate({'Val' : elprice_agg}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)        
-        fD = fElD.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
+        fP = fPrice.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
+        fP = fP.aggregate({'Val' : price_agg_func}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)        
+        fD = fDem.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
         fD = fD.aggregate({'Val' : np.sum}) 
         dems = fD[(fD['Y']==Y)]
 
@@ -202,7 +228,7 @@ try:
     # Subtract import from export
     f = pd.DataFrame({'IMPORT' : np.zeros(len(fPr))}, index=fPr.index)
     if not(no_trans_data):
-        if com == 'ELECTRICITY':
+        if (com == 'ELECTRICITY') | (com == 'HYDROGEN'):
             # f = f + fFlI - fFlE
             f_temp = pd.DataFrame([], index=fPr.index)
             try:
@@ -233,12 +259,20 @@ try:
         fP.Val = fP.Val.astype(float)
         
     idx = fP['Y'] == Y
-    fP = fP[idx].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)
+    fP = fP[idx].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=price_agg_func)
 
+    # Make sure no values are missing
+    fP = df_placeholder.join(fP, how='left')
+    fP.fillna(0, inplace=True)
+    
     # Demand
     idx = fD['Y'] == Y 
     fD = fD[idx].pivot_table(values='Val', index=['SSS', 'TTT'], aggfunc=sum)
-
+    
+    # Make sure no values are missing
+    fD = df_placeholder.join(fD, how='left')
+    fD.fillna(0, inplace=True)
+    
     # x-axis
     x = np.arange(0, len(fD), 1)
 
@@ -276,7 +310,7 @@ try:
     # ax.legend(ps+[p0, p1, p2], names, # With H2 production
     ax.legend(ps+[p1, p2], names, # Without H2 production
             loc='center', bbox_to_anchor=(.5, 1.28), ncol=5)
-    ax.set_title(SC + ' - ' + reg + ' - ' + str(Y))
+    ax.set_title(SC + ' - ' + com + ' - ' + reg + ' - ' + str(Y))
     ax.set_ylabel('Power [GW]')
     ax.set_xlabel('Time [h]')
     xticks = np.hstack(np.arange(0, len(fD), len(fD)/8)) # For H2-study resolution
