@@ -313,7 +313,7 @@ try:
             loc='center', bbox_to_anchor=(.5, 1.28), ncol=5)
     ax.set_title(SC + ' - ' + com + ' - ' + reg + ' - ' + str(Y))
     ax.set_ylabel('Power [GW]')
-    ax.set_xlabel('Time [h]')
+    ax.set_xlabel('All terms: ' + ', '.join(xticks.get_level_values(1).unique().to_list()))
     # xticks = np.hstack(np.arange(0, 673, 168)) # For 4 representative weeks
     # ax.set_xticks(xticks+12.5)
     # ax.set_xticklabels((xticks/24).astype(int)) # old
