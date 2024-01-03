@@ -274,6 +274,7 @@ try:
     fD.fillna(0, inplace=True)
     
     # x-axis
+    xticks = fD.index
     x = np.arange(0, len(fD), 1)
 
     # H2 Production
@@ -313,7 +314,6 @@ try:
     ax.set_title(SC + ' - ' + com + ' - ' + reg + ' - ' + str(Y))
     ax.set_ylabel('Power [GW]')
     ax.set_xlabel('Time [h]')
-    xticks = np.hstack(np.arange(0, len(fD), len(fD)/8)) # For H2-study resolution
     # xticks = np.hstack(np.arange(0, 673, 168)) # For 4 representative weeks
     # ax.set_xticks(xticks+12.5)
     # ax.set_xticklabels((xticks/24).astype(int)) # old
@@ -326,8 +326,12 @@ try:
     # ax.set_xlim([0, 192])
     # ax.set_xlim([2*168, 3*168])
     # ax.set_xlim([0, 4*168])
+    N_S = len(xticks.get_level_values(1).unique()) 
+    N_T = len(xticks.get_level_values(0).unique())
+    tick_step = round(len(x) / N_S) 
     ax.set_xlim([min(x), max(x)])
-
+    ax.set_xticks(x[::tick_step])
+    ax.set_xticklabels(xticks.get_level_values(1)[::tick_step] + '\n' + xticks.get_level_values(0)[::tick_step])
     # ax.set_ylim([-17, 14])
 
     # fig.savefig(SC+'_'+str(Y)+'_'+reg+'ElGraph.pdf', bbox_inches='tight',
