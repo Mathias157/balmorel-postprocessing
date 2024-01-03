@@ -313,7 +313,7 @@ try:
             loc='center', bbox_to_anchor=(.5, 1.28), ncol=5)
     ax.set_title(SC + ' - ' + com + ' - ' + reg + ' - ' + str(Y))
     ax.set_ylabel('Power [GW]')
-    ax.set_xlabel('All terms: ' + ', '.join(xticks.get_level_values(1).unique().to_list()))
+    ax.set_xlabel('Terms: ' + ', '.join(xticks.get_level_values(1).unique().to_list()))
     # xticks = np.hstack(np.arange(0, 673, 168)) # For 4 representative weeks
     # ax.set_xticks(xticks+12.5)
     # ax.set_xticklabels((xticks/24).astype(int)) # old
@@ -326,12 +326,12 @@ try:
     # ax.set_xlim([0, 192])
     # ax.set_xlim([2*168, 3*168])
     # ax.set_xlim([0, 4*168])
-    N_S = len(xticks.get_level_values(1).unique()) 
-    N_T = len(xticks.get_level_values(0).unique())
-    tick_step = round(len(x) / N_S) 
+    N_S = len(xticks.get_level_values(0).unique()) 
+    N_T = len(xticks.get_level_values(1).unique())
+    tick_step = N_T
     ax.set_xlim([min(x), max(x)])
     ax.set_xticks(x[::tick_step])
-    ax.set_xticklabels(xticks.get_level_values(1)[::tick_step] + '\n' + xticks.get_level_values(0)[::tick_step])
+    ax.set_xticklabels(xticks.get_level_values(0)[::tick_step], rotation=90)
     # ax.set_ylim([-17, 14])
 
     # fig.savefig(SC+'_'+str(Y)+'_'+reg+'ElGraph.pdf', bbox_inches='tight',
