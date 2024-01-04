@@ -313,7 +313,13 @@ try:
             loc='center', bbox_to_anchor=(.5, 1.28), ncol=5)
     ax.set_title(SC + ' - ' + com + ' - ' + reg + ' - ' + str(Y))
     ax.set_ylabel('Power [GW]')
-    ax.set_xlabel('Terms: ' + ', '.join(xticks.get_level_values(1).unique().to_list()))
+    xlabel = xticks.get_level_values(1).unique().to_list()
+    if len(xlabel) > 14: 
+        xlabel = [', '.join(xlabel[i*14:(i+1)*14]) + '\n' for i in range(round(len(xlabel) / 14))]
+        ax.set_xlabel('Terms: ' + ''.join(xlabel))
+    else:
+        ax.set_xlabel('Terms: ' + ', '.join(xlabel))
+    
     # xticks = np.hstack(np.arange(0, 673, 168)) # For 4 representative weeks
     # ax.set_xticks(xticks+12.5)
     # ax.set_xticklabels((xticks/24).astype(int)) # old
@@ -323,7 +329,6 @@ try:
     else:
         ax2.set_ylabel('Average Price [€ / MWh]')
     # ax2.set_ylim([0, 300])
-    # ax.set_xlim([0, 192])
     # ax.set_xlim([2*168, 3*168])
     # ax.set_xlim([0, 4*168])
     N_S = len(xticks.get_level_values(0).unique()) 
@@ -332,6 +337,7 @@ try:
     ax.set_xlim([min(x), max(x)])
     ax.set_xticks(x[::tick_step])
     ax.set_xticklabels(xticks.get_level_values(0)[::tick_step], rotation=90)
+    # ax.set_xlim([x[N_T*13], x[N_T*14]])
     # ax.set_ylim([-17, 14])
 
     # fig.savefig(SC+'_'+str(Y)+'_'+reg+'ElGraph.pdf', bbox_inches='tight',
