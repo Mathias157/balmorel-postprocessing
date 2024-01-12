@@ -5,4 +5,6 @@ Python scripts perform most of the data processing, which ensures a more efficie
 
 The first sheet contains an installation manual and a guide.
 
-Follow the guide to ensure that all paths are correct and the excel functions properly 
+Follow the guide to ensure that all paths are correct and the excel functions properly.
+
+NOTE: The VBA and excel coding currently assumes a Windows operating system
