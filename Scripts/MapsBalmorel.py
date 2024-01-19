@@ -15,7 +15,11 @@ try:
 
     import traceback
     import geopandas as gpd
-    import cartopy.crs as ccrs
+    try:
+        import cartopy.crs as ccrs
+        cartopy_installed = True
+    except ModuleNotFoundError:
+        cartopy_installed = False
     import matplotlib.pyplot as plt
     import pandas as pd
     import numpy as np
@@ -582,20 +586,25 @@ try:
 
 
     ### 3 Plotting the Results
-    # With projection
-    projection = ccrs.EqualEarth()
-    fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={"projection": projection}, dpi=100,
-                        facecolor=fc)
+    if cartopy_installed:
+        projection = ccrs.EqualEarth()
+        fig, ax = plt.subplots(figsize=(12, 12), subplot_kw={"projection": projection}, dpi=100,
+                            facecolor=fc)
 
-    # fig, ax = plt.subplots(figsize=(12, 12), dpi=100,
-    #                        facecolor=fc)
-    ax.set_title(' - '.join((SCENARIO, str(year), COMMODITY + ' Transmission ' + LINES + ' [GW]')))
-    # ax.set_title('Ingen interk.')
-
-    # Adding shapefiles
-    ax.add_geometries(geo_file.geometry, crs = projection,
+        # Adding shapefiles
+        ax.add_geometries(geo_file.geometry, crs = projection,
                 facecolor=[.6, .6, .6], edgecolor='grey',
                 linewidth=.2)
+        
+    else:
+        fig, ax = plt.subplots(figsize=(12, 12), dpi=100,
+                            facecolor=fc)
+        
+        # Adding shapefiles
+        geo_file.plot(ax=ax, facecolor=[.6, .6, .6], edgecolor='grey', linewidth=.2)
+
+    ax.set_title(' - '.join((SCENARIO, str(year), COMMODITY + ' Transmission ' + LINES + ' [GW]')))
+
 
     ax.set_facecolor(fc)
     # EU limits
