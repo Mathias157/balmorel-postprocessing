@@ -60,15 +60,15 @@ try:
     else:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
-        os.chdir(__file__.replace(r'\Scripts\ProductionProfile.py', ''))
+        os.chdir(__file__.replace(r'\Scripts\MapsBalmorel.py', ''))
         path_to_results = r'C:\Users\mathi\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'
         path_to_geofile = r'.\Input\2022 BalmorelMap.geojson'
         geo_file_region_column = 'id'
-        SC = 'eur-system-test'
+        SCENARIO = 'eur-system-test_Iter0'
         iter = '0'
         reg = 'All'
         year = 2050 #Year to be displayed
-        COMMODITY = 'H2' #Choose from: ['Electricity', 'H2', 'Other']. Add to csv-files name (only relevant if filetype_input == 'csv'). If 'Other': go to cell 1.4.0.
+        COMMODITY = 'Hydrogen' #Choose from: ['Electricity', 'H2', 'Other']. Add to csv-files name (only relevant if filetype_input == 'csv'). If 'Other': go to cell 1.4.0.
         exo_end = 'Both' # Choose from ['Endogenous', 'Exogenous', 'Total']. For 'CongestionFlow', exo_end automatically switches to 'Total'.
         style = 'dark'
 
@@ -213,14 +213,15 @@ try:
 
     ### 1.3 Read geographic files
 
-    project_dir = Path('.\Input')
+    # project_dir = Path('.\Input')
+    project_dir = './Input'
 
     geo_file = gpd.read_file(path_to_geofile)
 
     # #Load coordinates files 
-    # df_unique = pd.read_csv(project_dir/'coordinates_RRR.csv')
+    # df_unique = pd.read_csv('./Input/coordinates_RRR.csv')
     # df_region = df_unique.loc[df_unique['Type'] == 'region', ]
-    df_bypass = pd.read_csv(project_dir/'bypass_lines.csv') # coordinates of 'hooks' in indirect lines, to avoid going trespassing third regions
+    df_bypass = pd.read_csv('./Input/bypass_lines.csv') # coordinates of 'hooks' in indirect lines, to avoid going trespassing third regions
     # if AltGeo == 'MUNI':
     #     df_altreg = gpd.read_file(AltGeoPath)
     #     df_altreg.GID_2 = df_altreg.GID_2.str.replace('.', '_').str.replace('DNK', 'DK')
@@ -275,10 +276,11 @@ try:
             df = pd.DataFrame()
             if '_' in gdx_file:
                     # if yes: extract scenario name from gdx filename
-                scenario = gdx_file.split('_', 3)[-3]
-                year = gdx_file.split('_', 3)[-2]
-                subset = gdx_file.split('_', 3)[-1][:-4]
-                market = gdx_file.split('\\', 1)[0].split('/',3)[-1]
+                print(gdx_file)
+                scenario = SCENARIO
+                # year = year
+                subset = SUBSET
+                market = 'Invest'
             else:
                 # if no: use nan instead
                 scenario = 'nan'
@@ -293,7 +295,7 @@ try:
             # add a scenario column with the scenario name of the current iteration
             temp['Scenario'] = scenario
             temp['Market']  = market
-            temp['run'] = scenario + '_' + year + '_' + subset
+            temp['run'] = scenario + '_' + str(year) + '_' + subset
 
             # rearrange the columns' order
             cols = list(temp.columns)
@@ -374,7 +376,7 @@ try:
 
     ## 1.4A.4 - Hub data
     if filetype_input == 'gdx' and hub_display == True:
-        hub_windgen = (pd.read_csv(project_dir/'geo_files/hub_technologies.csv', sep = ',', quotechar = '"').hub_name) 
+        hub_windgen = (pd.read_csv('./Input/geo_files/hub_technologies.csv', sep = ',', quotechar = '"').hub_name) 
         df_capgen = all_df['G_CAP_YCRAF']
         if LINES == 'Flow' or LINES == 'CongestionFlow':
             df_hubprod = all_df['PRO_YCRAGFST']
@@ -402,7 +404,7 @@ try:
 
         if hub_display == True:
             prod_file = 'ProductionHourly_'+ SCENARIO + '_' + YEAR + '_' + SUBSET + '.csv'
-            hub_windgen = (pd.read_csv(project_dir/'geo_files/hub_technologies.csv', sep = ',', quotechar = '"').hub_name) 
+            hub_windgen = (pd.read_csv('./Input/geo_files/hub_technologies.csv', sep = ',', quotechar = '"').hub_name) 
             #Generation capacity data
             df_capgen = pd.read_csv(str(project_dir) + '/results/' + str(market) + '/' + str(generation_file), sep = ',', quotechar = '"') 
             if LINES == 'Flow' or LINES == 'CongestionFlow':
@@ -698,14 +700,14 @@ try:
             # The text
             if i == 0:
                 ave = (cluster_groups[i] + cluster_groups[i+1])/2
-                string.append('$\\less$ %0.1f GW$_\mathrm{%s}$'%(ave, subs))
+                # string.append('$\\less$ %0.1f GW$_\mathrm{%s}$'%(ave, subs))
             elif i == len(cluster_groups)-1:
                 ave = (cluster_groups[i] + cluster_groups[i-1])/2
-                string.append('$\\geq$ %0.1f GW$_\mathrm{%s}$'%(ave, subs))
+                # string.append('$\\geq$ %0.1f GW$_\mathrm{%s}$'%(ave, subs))
             else:
                 ave0 = (cluster_groups[i] + cluster_groups[i-1])/2
                 ave1 = (cluster_groups[i] + cluster_groups[i+1])/2
-                string.append('%0.1f-%0.1f GW$_\mathrm{%s}$'%(ave0, ave1, subs))
+                # string.append('%0.1f-%0.1f GW$_\mathrm{%s}$'%(ave0, ave1, subs))
         
         ax.legend(lines, string, loc='center',
                 bbox_to_anchor=(.2, .88 ))
