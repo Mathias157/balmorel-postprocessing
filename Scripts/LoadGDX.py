@@ -3,7 +3,7 @@ Created on 11.11.2023
 
 @author: Mathias Berg Rosendal, PhD Student at DTU Management (Energy Economics & Modelling)
 """
-### ------------------------------- ###
+#%% ------------------------------- ###
 ###        0. Script Settings       ###
 ### ------------------------------- ###
 import traceback
@@ -17,19 +17,21 @@ try:
 
     ### 0.0 Load Arguments
     if len(sys.argv) > 2:
-        path    = r'%s'%sys.argv[1]
+        paths    = (r'%s'%sys.argv[1]).split(',')
         SCs     = convert_to_list(sys.argv[2])
         iters   = convert_to_list(sys.argv[3])
         symbols = convert_to_list(sys.argv[4])
+        print(sys.argv)
         
     ### 0.1 If no arguments, then you are probably running this script stand-alone
     else:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
         os.chdir(__file__.replace(r'\Scripts\LoadGDX.py', ''))
-        path = r'C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model'
-        SCs = ['%scenario_name%']
-        iters = []
+        paths = r'C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T8\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T21\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W10T24\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W20T24\model'.split(',')
+        # paths = convert_to_list('C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T8\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T21\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W10T24\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W20T24\model')
+        SCs = ['W5T21', 'W20T24']
+        iters = [0]
         symbols = ['EL_PRICE_YCR']
 
     ### ------------------------------- ###
@@ -46,40 +48,46 @@ try:
         if len(iters) >= 1:
             for itr in iters:                
                 SC_FULL = SC + '_Iter%s'%itr
-                try:
-                    print('\nTrying to load MainResults_%s.gdx..'%SC_FULL)
-                    db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC_FULL)
-                    
-                    for symbol in symbols:
-                        try:
-                            temp = symbol_to_df(db, symbol)
-                            temp['SC'] = SC
-                            temp['Iteration'] = itr
-                            dfs[symbol] = pd.concat((dfs[symbol], temp))
-                            print("Loaded %s"%(symbol))
-                        except:
-                            print("Couldn't load %s"%symbol)
-                except gams.GamsException:
-                    print("It doesn't exist, not loaded")
-                    search_exception += 1
+                print('\nTrying to load MainResults_%s.gdx from path..'%(SC_FULL))
+                for path in paths:
+                    try:
+                        print(path)
+                        db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC_FULL)
+                       
+                        for symbol in symbols:
+                            try:
+                                temp = symbol_to_df(db, symbol)
+                                temp['SC'] = SC
+                                temp['Iteration'] = itr
+                                dfs[symbol] = pd.concat((dfs[symbol], temp))
+                                print("Loaded %s"%(symbol))
+                            except:
+                                print("Couldn't load %s"%symbol)
+                    except gams.GamsException:
+                        print("It doesn't exist, not loaded")
+                        search_exception += 1
         try:
-            print('\nTrying to load MainResults_%s.gdx..'%SC)
-            db = ws.add_database_from_gdx(path + "/MainResults_%s.gdx"%SC)
+            print('\nTrying to load MainResults_%s.gdx from path..'%SC)
+            for path in paths:
             
-            for symbol in symbols:
-                try:
-                    temp = symbol_to_df(db, symbol)
-                    temp['SC'] = SC
-                    temp['Iteration'] = -1
-                    dfs[symbol] = pd.concat((dfs[symbol], temp)) 
-                    print("Loaded %s"%(symbol))
-                except:
-                    print("Couldn't load %s"%symbol)
+                print(path)
+                db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC)
+          
+            
+                for symbol in symbols:
+                    try:
+                        temp = symbol_to_df(db, symbol)
+                        temp['SC'] = SC
+                        temp['Iteration'] = -1
+                        dfs[symbol] = pd.concat((dfs[symbol], temp)) 
+                        print("Loaded %s"%(symbol))
+                    except:
+                        print("Couldn't load %s"%symbol)
         except gams.GamsException:
             search_exception += 1
             print("It doesn't exist, not loaded") 
             
-            if search_exception == 2:
+            if search_exception >= len(iters)*len(paths) + len(paths):
                 warning_message += "Couldn't find MainResults_%s.gdx or MainResults_%s.gdx in path:\n %s"%(SC_FULL, SC, path)   
             
     all_empty = 0
