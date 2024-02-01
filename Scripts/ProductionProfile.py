@@ -48,16 +48,37 @@ try:
     found_scenario = False
     for wk_dir in paths: 
         wk_dir = wk_dir.lstrip(' ').rstrip(' ')
-        if os.path.exists(wk_dir + '/MainResults_%s_Iter%s.gdx'%(SC, iter)): 
-            print('Found %s_Iter%s in %s'%(SC, iter, wk_dir))
-            SC = SC + '_Iter%s'%iter
-            found_scenario = True
+        if wk_dir[-4:] == '\...':
+            wk_dir = wk_dir[:-4]
+            for subdir in pd.Series(os.listdir(wk_dir.rstrip('\...'))):  
+                subpath = os.path.join(wk_dir, subdir, 'model')
+                if os.path.isdir(subpath):
+                    if os.path.exists(subpath + '/MainResults_%s_Iter%s.gdx'%(SC, iter)): 
+                        wk_dir = subpath
+                        print('Found %s_Iter%s in %s'%(SC, iter, wk_dir))
+                        SC = SC + '_Iter%s'%iter
+                        found_scenario = True
+                        break
+                        
+                    elif os.path.exists(subpath + '/MainResults_%s.gdx'%SC):
+                        wk_dir = subpath
+                        print('Found %s in %s'%(SC, wk_dir))
+                        found_scenario = True     
+                        break
+                    
+        else:
+            if os.path.exists(wk_dir + '/MainResults_%s_Iter%s.gdx'%(SC, iter)): 
+                print('Found %s_Iter%s in %s'%(SC, iter, wk_dir))
+                SC = SC + '_Iter%s'%iter
+                found_scenario = True
+                
+            elif os.path.exists(wk_dir + '/MainResults_%s.gdx'%SC):
+                print('Found %s in %s'%(SC, wk_dir))
+                found_scenario = True
+                
+        if found_scenario:
             break
-        elif os.path.exists(wk_dir + '/MainResults_%s.gdx'%SC):
-            print('Found %s in %s'%(SC, wk_dir))
-            found_scenario = True
-            break
-    
+
     if found_scenario:
         ### 0.2 Set plot style
         if style == 'light':

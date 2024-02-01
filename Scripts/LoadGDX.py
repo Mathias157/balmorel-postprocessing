@@ -12,6 +12,7 @@ try:
     
     import gams
     import sys
+    import os
     import pandas as pd
     from Functions import symbol_to_df, convert_to_list
 
@@ -44,34 +45,64 @@ try:
     warning_message = ''
 
     for SC in SCs:
-        search_exception = 0
         if len(iters) >= 1:
             for itr in iters:                
                 SC_FULL = SC + '_Iter%s'%itr
                 print('\nTrying to load MainResults_%s.gdx from path..'%(SC_FULL))
                 for path in paths:
-                    try:
-                        print(path)
-                        db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC_FULL)
-                       
-                        for symbol in symbols:
-                            try:
-                                temp = symbol_to_df(db, symbol)
-                                temp['SC'] = SC
-                                temp['Iteration'] = itr
-                                dfs[symbol] = pd.concat((dfs[symbol], temp))
-                                print("Loaded %s"%(symbol))
-                            except:
-                                print("Couldn't load %s"%symbol)
-                    except gams.GamsException:
-                        print("It doesn't exist, not loaded")
-                        search_exception += 1
+                    path = path.lstrip(' ').rstrip(' ')
+                    if path[-4:] == '\...':
+                        path = path.rstrip('\...')
+                        for subdir in os.listdir(path):  
+                            subpath = os.path.join(path, subdir, 'model')
+                            if os.path.exists(subpath + "/MainResults_%s.gdx"%SC_FULL):
+                                print(subpath)
+                                try:
+                                    db = ws.add_database_from_gdx(subpath.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC_FULL)
+                                
+                                    for symbol in symbols:
+                                        try:
+                                            temp = symbol_to_df(db, symbol)
+                                            temp['SC'] = SC
+                                            temp['Iteration'] = itr
+                                            dfs[symbol] = pd.concat((dfs[symbol], temp))
+                                            print("Loaded %s"%(symbol))
+                                        except:
+                                            print("Couldn't load %s"%symbol)
+                                except gams.GamsException:
+                                    print("It doesn't exist, not loaded")
+                                
+                    else:
+                        try:
+                            print(path)
+                            db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC_FULL)
+                        
+                            for symbol in symbols:
+                                try:
+                                    temp = symbol_to_df(db, symbol)
+                                    temp['SC'] = SC
+                                    temp['Iteration'] = itr
+                                    dfs[symbol] = pd.concat((dfs[symbol], temp))
+                                    print("Loaded %s"%(symbol))
+                                except:
+                                    print("Couldn't load %s"%symbol)
+                        except gams.GamsException:
+                            print("It doesn't exist, not loaded")
         try:
             print('\nTrying to load MainResults_%s.gdx from path..'%SC)
             for path in paths:
-            
-                print(path)
-                db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC)
+                
+                path = path.lstrip(' ').rstrip(' ')
+                if path[-4:] == '\...':
+                        path = path[:-4]
+                        for subdir in pd.Series(os.listdir(path)):  
+                            subpath = os.path.join(path, subdir, 'model')
+                            if os.path.exists(subpath + "/MainResults_%s.gdx"%SC_FULL):
+                                print(subpath)
+                                db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC)
+                else:
+                    print(path)
+                    db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC)
           
             
                 for symbol in symbols:
@@ -84,11 +115,7 @@ try:
                     except:
                         print("Couldn't load %s"%symbol)
         except gams.GamsException:
-            search_exception += 1
             print("It doesn't exist, not loaded") 
-            
-            if search_exception >= len(iters)*len(paths) + len(paths):
-                warning_message += "Couldn't find MainResults_%s.gdx or MainResults_%s.gdx in path:\n %s"%(SC_FULL, SC, path)   
             
     all_empty = 0
     for symbol in symbols:

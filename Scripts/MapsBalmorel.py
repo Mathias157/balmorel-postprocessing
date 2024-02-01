@@ -61,10 +61,10 @@ try:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
         os.chdir(__file__.replace(r'\Scripts\MapsBalmorel.py', ''))
-        paths = r'C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W20T24\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model, '.split(',')
+        paths = r'C:\Users\mathi\gitRepos\balmorel-antares\Balmorel\...'.split(',')
         path_to_geofile = r'.\Input\2022 BalmorelMap.geojson'
         geo_file_region_column = 'id'
-        SCENARIO = 'W20T24'
+        SCENARIO = 'W5T8'
         iter = '0'
         reg = 'All'
         year = 2050 #Year to be displayed
@@ -74,16 +74,39 @@ try:
 
     # Find the MainResults file
     found_scenario = False
-    for path_to_results in paths: 
+     
+    for path_to_results in paths:
         path_to_results = path_to_results.lstrip(' ').rstrip(' ')
-        if os.path.exists(path_to_results + '/MainResults_%s_Iter%s.gdx'%(SCENARIO, iter)): 
-            print('Found %s_Iter%s in %s'%(SCENARIO, iter, path_to_results))
-            SCENARIO = SCENARIO + '_Iter%s'%iter
-            found_scenario = True
-            break
-        elif os.path.exists(path_to_results + '/MainResults_%s.gdx'%SCENARIO):
-            print('Found %s in %s'%(SCENARIO, path_to_results))
-            found_scenario = True
+        if path_to_results[-4:] == '\...':
+            path_to_results = path_to_results[:-4]
+            for subdir in pd.Series(os.listdir(path_to_results.rstrip('\...'))):  
+                subpath = os.path.join(path_to_results, subdir, 'model')
+                if os.path.isdir(subpath):
+                    if os.path.exists(subpath + '/MainResults_%s_Iter%s.gdx'%(SCENARIO, iter)): 
+                        path_to_results = subpath
+                        print('Found %s_Iter%s in %s'%(SCENARIO, iter, path_to_results))
+                        SCENARIO = SCENARIO + '_Iter%s'%iter
+                        found_scenario = True
+                        break
+                        
+                    elif os.path.exists(subpath + '/MainResults_%s.gdx'%SCENARIO):
+                        path_to_results = subpath
+                        print('Found %s in %s'%(SCENARIO, path_to_results))
+                        found_scenario = True
+                        break
+                    
+        else:
+            if os.path.exists(path_to_results + '/MainResults_%s_Iter%s.gdx'%(SCENARIO, iter)): 
+                print('Found %s_Iter%s in %s'%(SCENARIO, iter, path_to_results))
+                SCENARIO = SCENARIO + '_Iter%s'%iter
+                found_scenario = True
+                
+            elif os.path.exists(path_to_results + '/MainResults_%s.gdx'%SCENARIO):
+                print('Found %s in %s'%(SCENARIO, path_to_results))
+                found_scenario = True
+                
+    
+        if found_scenario:
             break
     
     if found_scenario:
