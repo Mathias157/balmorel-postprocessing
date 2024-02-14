@@ -31,10 +31,18 @@ try:
         os.chdir(__file__.replace(r'\Scripts\LoadGDX.py', ''))
         paths = r'C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T8\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T21\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W10T24\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W20T24\model'.split(',')
         # paths = convert_to_list('C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\base\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T8\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W5T21\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W10T24\model, C:\Users\mberos\gitRepos\balmorel-antares\Balmorel\W20T24\model')
-        SCs = ['W5T21', 'W20T24']
+        SCs = ['All']
         iters = [0]
         symbols = ['EL_PRICE_YCR']
 
+    if SCs[0].lower() == 'all':
+        # Find all MainResults in the first path
+        SClist = pd.Series(os.listdir(paths[0]))
+        SClist = SClist[SClist.str.find('MainResults_') != -1]
+        SClist = SClist.str.split('_Iter', expand=True)[0]
+        SClist = SClist.str.replace('MainResults_', '').str.rstrip('.gdx')
+        SCs = list(SClist)
+    
     ### ------------------------------- ###
     ###         1. Open GDX File        ###
     ### ------------------------------- ###
