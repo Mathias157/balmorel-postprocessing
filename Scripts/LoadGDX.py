@@ -41,7 +41,7 @@ try:
         SClist = SClist[SClist.str.find('MainResults_') != -1]
         SClist = SClist.str.split('_Iter', expand=True)[0]
         SClist = SClist.str.replace('MainResults_', '').str.rstrip('.gdx')
-        SCs = list(SClist)
+        SCs = list(SClist.unique())
     
     ### ------------------------------- ###
     ###         1. Open GDX File        ###
