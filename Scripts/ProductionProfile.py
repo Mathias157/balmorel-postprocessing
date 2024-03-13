@@ -35,11 +35,11 @@ try:
         import os
         print('-------------------------------\n'+'           TEST MODE           \n'+'-------------------------------\n')
         os.chdir(__file__.replace(r'\Scripts\ProductionProfile.py', ''))
-        paths = r'C:\Users\mberos\Danmarks Tekniske Universitet\PhD in Transmission and Sector Coupling - Dokumenter\Deliverables\Smart-coupling of Balmorel and Antares\Harmonisation Analyses'.split(',')
-        SC = 'eur-system-test_Iter0'
+        paths = r'C:\Users\mathi\gitRepos\spatial-aggregation\muni+nord\model'.split(',')
+        SC = 'Muni+NordBefore'
         iter = '0'
-        reg = 'DE4-W'
-        com = 'HYDROGEN'
+        reg = 'All'.upper()
+        com = 'HEAT'
         Y = '2050'
         typ = 'TECH_TYPE' # Should be a column, e.g. TECH_TYPE, RRR, AAA, G
         style = 'dark'
@@ -111,9 +111,12 @@ try:
         if com == 'ELECTRICITY':
             fPrice  = symbol_to_df(db, "EL_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
             fDem  = symbol_to_df(db, "EL_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
-        else:
+        elif com == 'HYDROGEN':
             fPrice  = symbol_to_df(db, "H2_PRICE_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'UNITS', 'Val']) 
             fDem  = symbol_to_df(db, "H2_DEMAND_YCRST", cols=['Y', 'C', 'RRR', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
+        elif com == 'HEAT':
+            fPrice  = symbol_to_df(db, "H_PRICE_YCRAST", cols=['Y', 'C', 'RRR', 'AAA', 'SSS', 'TTT', 'UNITS', 'Val']) 
+            fDem  = symbol_to_df(db, "H_DEMAND_YCRAST", cols=['Y', 'C', 'RRR', 'AAA', 'SSS', 'TTT', 'VARIABLE_CATEGORY', 'UNIT', 'Val'])  
 
         ### ----------------------------- ###
         ###           Parameters          ###
@@ -121,26 +124,38 @@ try:
 
         # Choices
         if reg in fProd.C.unique():
-            RorC = 'C' # Region or country level?
+            CorRorA = 'C' # Region or country level?
             country = reg 
             # Load transmission
             if com == 'ELECTRICITY':
                 fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
             elif com == 'HYDROGEN':
                 fFlow = symbol_to_df(db, "XH2_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+            elif com == 'HEAT':
+                fFlow = symbol_to_df(db, "XH_FLOW_YCAST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
             else:
                 pass
         elif reg in fProd.RRR.unique():
-            RorC = 'R'
+            CorRorA = 'R'
             # Load transmission
             if com == 'ELECTRICITY':
                 fFlow = symbol_to_df(db, "X_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
             elif com == 'HYDROGEN':
                 fFlow = symbol_to_df(db, "XH2_FLOW_YCRST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+            elif com == 'HEAT':
+                fFlow = symbol_to_df(db, "XH_FLOW_YCAST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
             else:
                 pass   
+        elif reg in fProd.AAA.unique():
+            CorRorA = 'A'
+            fFlow = symbol_to_df(db, "XH_FLOW_YCAST", cols=['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
         elif reg == 'ALL':
-            RorC = 'All'
+            CorRorA = 'All'
+            
+        # Check if flow is empty
+        if len(fFlow) == 0:
+            fFlow = pd.DataFrame(columns = ['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+            
         resfactor = 1 # Factor on flows, to get yearly results 
         price_agg_func = np.average # function for aggregation of regions - average or max ?
         bypass_eps = 'Y' # Bypass EPS values in electricity prices? This could be fair, if you have regions with very small electricity demand, making EPS electricity prices (not wrong)
@@ -179,11 +194,13 @@ try:
 
         
         # Production
-        if RorC == 'R':
+        if CorRorA == 'R':
             idx = fProd['RRR'] == reg
-        elif RorC == 'C':
+        elif CorRorA == 'C':
             idx = fProd['C'] == country
-        elif RorC == 'All':
+        elif CorRorA == 'A':
+            idx = fProd['AAA'] == reg
+        elif CorRorA == 'All':
             idx = fProd['C'] == fProd['C']
         idx = idx & (fProd['COMMODITY'] == com)
         idx = idx & (fProd['Y'] == Y)
@@ -199,7 +216,7 @@ try:
         
         ### Import / Export
         # First aggregate regions in country, if country
-        if RorC == 'C':
+        if CorRorA == 'C':
             for reg0 in [reg0 for reg0 in fFlow.loc[fFlow.C == reg, 'IRRRE'].unique()]:
                 fFlow['IRRRE'] = fFlow['IRRRE'].str.replace(reg0, country) 
                 fFlow['IRRRI'] = fFlow['IRRRI'].str.replace(reg0, country) 
@@ -238,7 +255,7 @@ try:
 
 
         ### Electricity Demand and price
-        if RorC == 'C':
+        if CorRorA == 'C':
             fP = fPrice.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
             fP = fP.aggregate({'Val' : price_agg_func}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)
             fP = fP[fP.C == country]    
@@ -247,11 +264,15 @@ try:
             fD = fD.aggregate({'Val' : np.sum}) 
             dems = fD[(fD['Y']==Y) & (fD['C'] == country)]
             fD = fDem[fDem.C == country] 
-        elif RorC == 'R':
+        elif CorRorA == 'R':
             dems = fDem[(fDem['Y']==Y) & (fDem['RRR'] == reg)]
             fP = fPrice[fPrice['RRR'] == reg]    
             fD = fDem[fDem['RRR'] == reg] 
-        elif RorC == 'All':
+        elif CorRorA == 'A':
+            dems = fDem[(fDem['Y']==Y) & (fDem['AAA'] == reg)]
+            fP = fPrice[fPrice['AAA'] == reg]    
+            fD = fDem[fDem['AAA'] == reg] 
+        elif CorRorA == 'All':
             fP = fPrice.groupby(['Y', 'C', 'SSS', 'TTT'], as_index=False)
             fP = fP.aggregate({'Val' : price_agg_func}) # For aggregation of electricity price, max or average? (maybe max if nodal representation of a market?)        
             fD = fDem.groupby(['Y', 'C', 'VARIABLE_CATEGORY', 'SSS', 'TTT'], as_index=False)
@@ -265,26 +286,23 @@ try:
         # Subtract import from export
         f = pd.DataFrame({'IMPORT' : np.zeros(len(fPr))}, index=fPr.index)
         if not(no_trans_data):
-            if (com == 'ELECTRICITY') | (com == 'HYDROGEN'):
-                # f = f + fFlI - fFlE
-                f_temp = pd.DataFrame([], index=fPr.index)
-                try:
-                    f_temp['IMPORT'] = fFlI
-                    f_temp['EXPORT'] = -fFlE
-                    f_temp[np.isnan(f_temp)] = 0
-                except ValueError:
-                    # If no connections to this region
-                    pass
-                
-                # f[np.isnan(f)] = 0
-                # f.columns = ['IMPORT']
-                f = pd.DataFrame([], index=fPr.index)
-                f['IMPORT'] = f_temp.sum(axis=1)
-                
-                f[fPr.columns] = fPr
+            # f = f + fFlI - fFlE
+            f_temp = pd.DataFrame([], index=fPr.index)
+            try:
+                f_temp['IMPORT'] = fFlI
+                f_temp['EXPORT'] = -fFlE
+                f_temp[np.isnan(f_temp)] = 0
+            except ValueError:
+                # If no connections to this region
+                pass
+            
+            # f[np.isnan(f)] = 0
+            # f.columns = ['IMPORT']
+            f = pd.DataFrame([], index=fPr.index)
+            f['IMPORT'] = f_temp.sum(axis=1)
+            
+            f[fPr.columns] = fPr
                     
-            else:
-                print('Need to make heat script')
         else:
             f = pd.DataFrame([], index=fPr.index)
             f[fPr.columns] = fPr
@@ -361,7 +379,7 @@ try:
         # ax.set_xticks(xticks+12.5)
         # ax.set_xticklabels((xticks/24).astype(int)) # old
         # ax.set_xticklabels(['S02', 'S08', 'S15', 'S21', 'S28', 'S34', 'S41', 'S47']) # For 4 representative weeks
-        if (RorC == 'R'):
+        if (CorRorA == 'R') | (CorRorA == 'A'):
             ax2.set_ylabel('Price [€ / MWh]')
         else:
             ax2.set_ylabel('Average Price [€ / MWh]')
