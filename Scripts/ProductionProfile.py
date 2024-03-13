@@ -153,8 +153,9 @@ try:
             CorRorA = 'All'
             
         # Check if flow is empty
-        if len(fFlow) == 0:
-            fFlow = pd.DataFrame(columns = ['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
+        if (reg != 'ALL'):
+            if (len(fFlow) == 0):
+                fFlow = pd.DataFrame(columns = ['Y', 'C', 'IRRRE', 'IRRRI', 'SSS', 'TTT', 'UNITS', 'Val'])
             
         resfactor = 1 # Factor on flows, to get yearly results 
         price_agg_func = np.average # function for aggregation of regions - average or max ?
