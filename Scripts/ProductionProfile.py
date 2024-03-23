@@ -330,7 +330,8 @@ try:
         fD.fillna(0, inplace=True)
         
         # x-axis
-        xticks = fD.index
+        xticks = fD.index.sort_values()
+        fD = fD.loc[xticks]
         x = np.arange(0, len(fD), 1)
 
         # H2 Production
@@ -345,11 +346,11 @@ try:
         ps = []
         for col in f:
             try:
-                ps.append(ax.fill_between(x, temp, temp+f[col].values/1e3, label=col, facecolor=np.array(c[col]).round(2)))
+                ps.append(ax.fill_between(x, temp, temp+f.loc[xticks, col].values/1e3, label=col, facecolor=np.array(c[col]).round(2)))
             except KeyError:
                 print('No defined colour for %s'%col)
-                ps.append(ax.fill_between(x, temp, temp+f[col].values/1e3, label=col))
-            temp = temp + f[col].values/1e3       
+                ps.append(ax.fill_between(x, temp, temp+f.loc[xticks, col].values/1e3, label=col))
+            temp = temp + f.loc[xticks, col].values/1e3       
 
         # p0, = ax.plot(x, H2, color=[76/255,128/255, 204/255])
         p1, = ax.plot(x, fD.values[:,0]/1e3, color=demcolor)
