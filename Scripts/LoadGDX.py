@@ -40,7 +40,7 @@ try:
         SClist = pd.Series(os.listdir(paths[0]))
         SClist = SClist[SClist.str.find('MainResults_') != -1]
         SClist = SClist.str.split('_Iter', expand=True)[0]
-        SClist = SClist.str.replace('MainResults_', '').str.rstrip('.gdx')
+        SClist = SClist.str.replace('MainResults_', '').str.replace('.gdx', '')
         SCs = list(SClist.unique())
     
     ### ------------------------------- ###
@@ -60,7 +60,7 @@ try:
                 for path in paths:
                     path = path.lstrip(' ').rstrip(' ')
                     if path[-4:] == '\...':
-                        path = path.rstrip('\...')
+                        path = path.replace('\...', '')
                         for subdir in os.listdir(path):  
                             subpath = os.path.join(path, subdir, 'model')
                             if os.path.exists(subpath + "/MainResults_%s.gdx"%SC_FULL):
@@ -105,7 +105,7 @@ try:
                         path = path[:-4]
                         for subdir in pd.Series(os.listdir(path)):  
                             subpath = os.path.join(path, subdir, 'model')
-                            if os.path.exists(subpath + "/MainResults_%s.gdx"%SC_FULL):
+                            if os.path.exists(subpath + "/MainResults_%s.gdx"%SC):
                                 print(subpath)
                                 db = ws.add_database_from_gdx(path.lstrip(' ').rstrip(' ') + "/MainResults_%s.gdx"%SC)
                 else:
